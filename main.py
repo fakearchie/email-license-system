@@ -26,23 +26,14 @@ async def handle_order_paid(request: Request):
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
         order_data = await request.json()
         logger.info(f"Received order data: {order_data}")
-        success_messages = []
+        summary = []
         for item in order_data.get("line_items", []):
             try:
                 product_id = str(item["product_id"])
                 category = await license_service.get_product_category(product_id)
-                order_id = str(order_data["order_number"])
                 try:
                     license_key = await license_service.pop_license_key(category)
                     logger.info(f"Assigned license key: {license_key} for category {category}")
-                    await license_service.store_license_key(
-                        license_key=license_key,
-                        category=category,
-                        email=order_data["email"],
-                        order_id=order_id,
-                        product_id=product_id,
-                        product_name=item["title"]
-                    )
                     await email_service.send_license_email(
                         customer_email=order_data["email"],
                         order_number=order_data["order_number"],
@@ -50,7 +41,7 @@ async def handle_order_paid(request: Request):
                         license_key=license_key
                     )
                     logger.info(f"License key delivered for order {order_data['order_number']}")
-                    success_messages.append(f"License for category '{category}' sent to {order_data['email']}")
+                    summary.append(f"License for category '{category}' sent to {order_data['email']}")
                 except Exception as e:
                     # Out of stock: send notification email
                     logger.error(f"Error assigning license: {str(e)}")
@@ -59,11 +50,12 @@ async def handle_order_paid(request: Request):
                         product_name=item["title"],
                         category=category
                     )
-                    success_messages.append(f"No license available for category '{category}' (notified {order_data['email']})")
+                    summary.append(f"No license available for category '{category}' (notified {order_data['email']})")
             except Exception as e:
                 logger.error(f"Error processing line item: {str(e)}")
                 return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
-        return JSONResponse(content={"status": "success", "messages": success_messages}, status_code=200)
+        # Only one message in response, joined by newlines
+        return JSONResponse(content={"status": "success", "message": "\n".join(summary)}, status_code=200)
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
         return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
