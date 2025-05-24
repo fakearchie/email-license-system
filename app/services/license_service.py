@@ -31,18 +31,30 @@ async def get_product_category(product_id: str) -> str:
 
 async def generate_license_key(category: str, order_id: str, product_id: str) -> str:
     """Pop and return the next license key from licenses.json for the given category."""
-    with open(LICENSES_FILE, 'r+') as f:
-        data = json.load(f)
-        keys = data.get(category, [])
-        if not keys:
-            raise Exception(f"No license keys left for category: {category}")
-        license_key = keys.pop(0)
-        data[category] = keys
-        f.seek(0)
-        f.truncate()
-        json.dump(data, f, indent=2)
-    logger.info(f"Popped license key {license_key} from category {category}")
-    return license_key
+    try:
+        if not os.path.exists(LICENSES_FILE):
+            logger.error(f"licenses.json file not found at {LICENSES_FILE}")
+            raise Exception("License key file missing. Please contact support.")
+        with open(LICENSES_FILE, 'r+', encoding='utf-8') as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse licenses.json: {e}")
+                raise Exception("License key file is corrupted. Please contact support.")
+            keys = data.get(category, [])
+            if not keys:
+                logger.error(f"No license keys left for category: {category}")
+                raise Exception(f"No license keys left for category: {category}")
+            license_key = keys.pop(0)
+            data[category] = keys
+            f.seek(0)
+            f.truncate()
+            json.dump(data, f, indent=2)
+        logger.info(f"Popped license key {license_key} from category {category}")
+        return license_key
+    except Exception as e:
+        logger.error(f"Error retrieving license key: {e}")
+        raise
 
 async def store_license_key(
     license_key: str, 
