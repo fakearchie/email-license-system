@@ -1,0 +1,14 @@
+{
+  "basic": [
+    "BSC-KEY-1-TEST",
+    "BSC-KEY-2-TEST",
+    "BSC-KEY-3-TEST"
+  ],
+  "pro": [
+    "PRO-KEY-1-TEST",
+    "PRO-KEY-2-TEST"
+  ],
+  "enterprise": [
+    "ENT-KEY-1-TEST"
+  ]
+}
