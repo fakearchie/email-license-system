@@ -12,7 +12,7 @@ from app.services import supabase_service
 settings = Settings()
 
 # Your Vercel URL (replace this with your actual Vercel URL)
-VERCEL_URL = "https://webhook-43060swbu-spotlights-projects-5455652f.vercel.app"
+VERCEL_URL = "https://webhook-mlo9opl93-spotlights-projects-5455652f.vercel.app"
 
 # Add diagnostics
 print(f"Testing against URL: {VERCEL_URL}")
