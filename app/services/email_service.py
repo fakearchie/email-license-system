@@ -238,7 +238,7 @@ async def send_email_with_retry(message, max_retries=3):
             await smtp.connect()
             if not use_tls:
                 # Only call starttls if not already using TLS
-                if not smtp.is_tls:
+                if not getattr(smtp, '_tls_protocol', None):
                     logger.info("Starting TLS...")
                     await smtp.starttls()
             logger.info("Logging into SMTP server...")
