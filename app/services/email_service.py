@@ -1,10 +1,10 @@
+import os
 from typing import Optional
 import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from jinja2 import Template
 import ssl
-import os
 import logging
 import time
 from app.config import Settings
