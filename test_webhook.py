@@ -7,9 +7,9 @@ import os
 import sys
 
 # Load environment variables or config
-SHOPIFY_WEBHOOK_SECRET = os.environ.get("SHOPIFY_WEBHOOK_SECRET", "testsecret")
-SHOPIFY_SHOP_DOMAIN = os.environ.get("SHOPIFY_SHOP_DOMAIN", "testshop.myshopify.com")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "http://localhost:8000/webhook/order/paid")
+SHOPIFY_WEBHOOK_SECRET = os.environ.get("SHOPIFY_WEBHOOK_SECRET", "test_secret_123")
+SHOPIFY_SHOP_DOMAIN = os.environ.get("SHOPIFY_SHOP_DOMAIN", "11ncz9-wk.myshopify.com/")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://email-license-system-production.up.railway.app/webhook/order/paid")
 
 # Example Shopify order paid payload
 order_data = {
@@ -40,10 +40,16 @@ async def send_shopify_test_webhook():
         "X-Shopify-Shop-Domain": SHOPIFY_SHOP_DOMAIN,
         "Content-Type": "application/json"
     }
-    async with httpx.AsyncClient() as client:
-        response = await client.post(WEBHOOK_URL, headers=headers, data=json_data)
-        print(f"Status code: {response.status_code}")
-        print(f"Response: {response.text}")
+    async with httpx.AsyncClient(timeout=30) as client:  # Increased timeout
+        try:
+            response = await client.post(WEBHOOK_URL, headers=headers, data=json_data)
+            print(f"Status code: {response.status_code}")
+            print(f"Response: {response.text}")
+        except httpx.RequestError as exc:
+            print(f"An error occurred while requesting {exc.request.url!r}.")
+            print(f"Details: {exc}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
 
 if __name__ == "__main__":
     import asyncio
