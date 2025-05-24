@@ -216,10 +216,6 @@ async def send_email_with_retry(message, max_retries=3):
             # Check if we're on Vercel 
             is_vercel = os.environ.get("VERCEL") == "1"
             
-            logger.info(f"SMTP Settings: {settings.SMTP_HOST}:{settings.SMTP_PORT}")
-            logger.info(f"Sending email to: {message['To']}")
-            logger.info(f"Running on Vercel: {is_vercel}")
-            
             # Create SSL context explicitly
             ssl_context = ssl.create_default_context()
             
@@ -234,14 +230,9 @@ async def send_email_with_retry(message, max_retries=3):
                 timeout=30  # Increase timeout for Vercel environment
             )
             
-            logger.info(f"Connecting to SMTP server with use_tls={use_tls}...")
             await smtp.connect()
-            # Do NOT call starttls at all, just connect and login
-            logger.info("Logging into SMTP server...")
             await smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            logger.info("Sending message...")
             await smtp.send_message(message)
-            logger.info("Quitting SMTP connection...")
             await smtp.quit()
             return  # Success, exit function
             

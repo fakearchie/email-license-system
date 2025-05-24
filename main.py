@@ -25,7 +25,6 @@ async def handle_order_paid(request: Request):
             logger.error("Invalid webhook signature")
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
         order_data = await request.json()
-        logger.info(f"Received order data: {order_data}")
         summary = []
         for item in order_data.get("line_items", []):
             try:
