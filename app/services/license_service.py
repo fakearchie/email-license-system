@@ -1,13 +1,10 @@
 from typing import Optional, List, Dict
-import logging
-import uuid
 import os
 import json
 from app.config import Settings
 from app.services import supabase_service
 
 settings = Settings()
-logger = logging.getLogger(__name__)
 
 LICENSES_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), '../licenses.json')
 
@@ -22,38 +19,31 @@ async def get_product_category(product_id: str) -> str:
             category = "pro"
         else:
             category = "enterprise"
-        logger.info(f"Using fallback category mapping: {category}")
         return category
     
     category = category_map.get(product_id, "basic")
-    logger.info(f"Mapped product {product_id} to category: {category}")
     return category
 
 async def generate_license_key(category: str, order_id: str, product_id: str) -> str:
     """Pop and return the next license key from licenses.json for the given category."""
     try:
         if not os.path.exists(LICENSES_FILE):
-            logger.error(f"licenses.json file not found at {LICENSES_FILE}")
             raise Exception("License key file missing. Please contact support.")
         with open(LICENSES_FILE, 'r+', encoding='utf-8') as f:
             try:
                 data = json.load(f)
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse licenses.json: {e}")
+            except json.JSONDecodeError:
                 raise Exception("License key file is corrupted. Please contact support.")
             keys = data.get(category, [])
             if not keys:
-                logger.error(f"No license keys left for category: {category}")
                 raise Exception(f"No license keys left for category: {category}")
             license_key = keys.pop(0)
             data[category] = keys
             f.seek(0)
             f.truncate()
             json.dump(data, f, indent=2)
-        logger.info(f"Popped license key {license_key} from category {category}")
         return license_key
     except Exception as e:
-        logger.error(f"Error retrieving license key: {e}")
         raise
 
 async def store_license_key(
@@ -137,30 +127,24 @@ def remove_key(key: str) -> bool:
     return False
 
 async def pop_license_key(category: str) -> str:
-    """Pop and return the next license key from licenses.json for the given category."""
     try:
         if not os.path.exists(LICENSES_FILE):
-            logger.error(f"licenses.json file not found at {LICENSES_FILE}")
             raise Exception("License key file missing. Please contact support.")
         with open(LICENSES_FILE, 'r+', encoding='utf-8') as f:
             try:
                 data = json.load(f)
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse licenses.json: {e}")
+            except json.JSONDecodeError:
                 raise Exception("License key file is corrupted. Please contact support.")
             keys = data.get(category, [])
             if not keys:
-                logger.error(f"No license keys left for category: {category}")
                 raise Exception(f"No license keys left for category: {category}")
             license_key = keys.pop(0)
             data[category] = keys
             f.seek(0)
             f.truncate()
             json.dump(data, f, indent=2)
-        logger.info(f"Popped license key {license_key} from category {category}")
         return license_key
     except Exception as e:
-        logger.error(f"Error retrieving license key: {e}")
         raise
 
 async def add_licenses(category: str, new_keys: list[str]):
@@ -180,7 +164,5 @@ async def add_licenses(category: str, new_keys: list[str]):
         data[category] = keys
         with open(LICENSES_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
-        logger.info(f"Added {len(new_keys)} license keys to category {category}")
     except Exception as e:
-        logger.error(f"Error adding licenses: {e}")
         raise

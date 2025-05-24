@@ -48,14 +48,18 @@ async def handle_order_paid(request: Request):
                         )
                         summary.add(key)
             except Exception as e:
-                return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
+                # Instead of 500, just add a generic error message and continue
+                summary.add(f"Error processing line item: {str(e)}")
+                continue
         # Only show unique messages, and for out-of-stock, show a single line per category/email/order
         out_msgs = [
             f"No license available for category '{key.split(':')[1]}' (notified {key.split(':')[2]})"
             if key.startswith("outofstock:") else key for key in summary
         ]
+        # Always return 200 OK so Shopify doesn't retry
         return JSONResponse(content={"status": "success", "message": "\n".join(out_msgs)}, status_code=200)
     except Exception as e:
+        # Only return 500 for actual server errors, not for business logic
         return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
 
 @app.post("/licenses/add/{category}")
