@@ -23,9 +23,11 @@ async def startup_event():
 async def handle_order_paid(request: Request):
     try:
         if not await verify_webhook(request, settings.SHOPIFY_WEBHOOK_SECRET):
+            logger.error("Invalid webhook signature")
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
-            
+        
         order_data = await request.json()
+        logger.info(f"Received order data: {order_data}")
         
         for item in order_data.get("line_items", []):
             try:
@@ -62,13 +64,13 @@ async def handle_order_paid(request: Request):
                 logger.info(f"License key delivered for order {order_data['order_number']}")
             except Exception as e:
                 logger.error(f"Error processing line item: {str(e)}")
-                continue
+                return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
         
         return JSONResponse(content={"status": "success"}, status_code=200)
     
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
 
 @app.get("/health")
 async def health_check():
