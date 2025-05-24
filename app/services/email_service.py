@@ -10,6 +10,42 @@ from app.config import Settings
 
 settings = Settings()
 
+EMAIL_TEMPLATE = """
+<!DOCTYPE html>
+<html lang=\"en\">\n<head>
+    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <style>
+        body { font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; color: #1a1a1a; margin: 0; padding: 0; }
+        .email-wrapper { width: 100%; max-width: 520px; margin: 0 auto; padding: 32px 24px; }
+        h1 { font-size: 24px; font-weight: 600; margin: 0 0 32px; letter-spacing: -0.3px; color: #000000; }
+        .order-details { font-size: 14px; color: #666666; margin: 24px 0; }
+        .license-container { margin: 32px 0; text-align: center; }
+        .license-key { display: inline-block; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 16px 24px; font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, monospace; font-size: 15px; letter-spacing: 0.5px; color: #000000; margin-bottom: 8px; }
+        .license-note { font-size: 13px; color: #666666; margin-top: 8px; }
+        .button-container { margin: 24px 0 40px; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #000000; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500; transition: all 0.2s ease; }
+        .button:hover { background-color: #333333; }
+        .footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid #f1f1f1; font-size: 13px; color: #666666; }
+        .help-text { margin-top: 32px; font-size: 14px; color: #666666; }
+        .help-link { color: #000000; text-decoration: none; border-bottom: 1px solid #000000; }
+    </style>
+</head>
+<body>
+    <div class=\"email-wrapper\">
+        <h1>Here's your license key</h1>
+        <div class=\"order-details\">Order #{{ order_number }} • {{ product_name }}</div>
+        <div class=\"license-container\">
+            <div class=\"license-key\">{{ license_key }}</div>
+            <div class=\"license-note\">Keep this key safe — you'll need it for activation</div>
+        </div>
+        <div class=\"button-container\" style=\"text-align: center;\">
+            <a href=\"https://{{ shop_domain }}/account/orders/{{ order_number }}\" class=\"button\">View order details</a>
+        </div>
+        <div class=\"footer\">© {{ current_year }} Spotlight. All rights reserved.</div>
+    </div>
+</body>
+</html>
+"""
+
 OUT_OF_STOCK_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -36,6 +72,8 @@ OUT_OF_STOCK_TEMPLATE = """
 </html>
 """
 
+default_current_year = 2025
+
 async def send_license_email(
     customer_email: str,
     order_number: str,
@@ -48,8 +86,10 @@ async def send_license_email(
         message["From"] = settings.SMTP_FROM_EMAIL
         message["To"] = customer_email
         from datetime import datetime
-        current_year = datetime.now().year
-        from app.services.email_service import EMAIL_TEMPLATE
+        try:
+            current_year = datetime.now().year
+        except Exception:
+            current_year = default_current_year
         template = Template(EMAIL_TEMPLATE)
         html_content = template.render(
             order_number=order_number,
