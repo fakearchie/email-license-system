@@ -224,7 +224,7 @@ async def send_email_with_retry(message, max_retries=3):
             ssl_context = ssl.create_default_context()
             
             # Use the correct port/TLS setting combo
-            use_tls = False if settings.SMTP_PORT == 465 else True
+            use_tls = True
             
             smtp = aiosmtplib.SMTP(
                 hostname=settings.SMTP_HOST,
