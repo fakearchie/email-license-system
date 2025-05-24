@@ -4,7 +4,7 @@ import logging
 import os
 
 from app.config import Settings
-from app.services import email_service, license_service, supabase_service
+from app.services import email_service, license_service
 from app.utils.shopify import verify_webhook
 
 app = FastAPI(title="License Key Delivery System")
@@ -17,65 +17,81 @@ logger = logging.getLogger(__name__)
 async def startup_event():
     logger.info("Application started")
     logger.info(f"SMTP Settings: {settings.SMTP_HOST}:{settings.SMTP_PORT}")
-    logger.info(f"Supabase URL: {settings.SUPABASE_URL}")
 
 @app.post("/webhook/order/paid")
 async def handle_order_paid(request: Request):
     try:
-        # Debug: log all headers and raw body for troubleshooting signature issues
-        headers = dict(request.headers)
-        logger.error(f"Webhook headers: {headers}")
-        raw_body = await request.body()
-        logger.error(f"Webhook raw body: {raw_body}")
         if not await verify_webhook(request, settings.SHOPIFY_WEBHOOK_SECRET):
             logger.error("Invalid webhook signature")
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
-        
         order_data = await request.json()
         logger.info(f"Received order data: {order_data}")
-        
+        success_messages = []
         for item in order_data.get("line_items", []):
             try:
-                # Get product details and category
                 product_id = str(item["product_id"])
                 category = await license_service.get_product_category(product_id)
                 order_id = str(order_data["order_number"])
-                
-                # Generate a license key 
-                license_key = await license_service.generate_license_key(category, order_id, product_id)
-                logger.info(f"Generated license key: {license_key} for category {category}")
-                
-                # Store license key in Supabase
-                result = await license_service.store_license_key(
-                    license_key=license_key,
-                    category=category,
-                    email=order_data["email"],
-                    order_id=order_id,
-                    product_id=product_id,
-                    product_name=item["title"]
-                )
-                
-                if not result["success"]:
-                    logger.error(f"Failed to store license key: {result.get('error')}")
-                
-                # Send email with the generated license key
-                await email_service.send_license_email(
-                    customer_email=order_data["email"],
-                    order_number=order_data["order_number"],
-                    product_name=item["title"],
-                    license_key=license_key
-                )
-                
-                logger.info(f"License key delivered for order {order_data['order_number']}")
+                try:
+                    license_key = await license_service.pop_license_key(category)
+                    logger.info(f"Assigned license key: {license_key} for category {category}")
+                    await license_service.store_license_key(
+                        license_key=license_key,
+                        category=category,
+                        email=order_data["email"],
+                        order_id=order_id,
+                        product_id=product_id,
+                        product_name=item["title"]
+                    )
+                    await email_service.send_license_email(
+                        customer_email=order_data["email"],
+                        order_number=order_data["order_number"],
+                        product_name=item["title"],
+                        license_key=license_key
+                    )
+                    logger.info(f"License key delivered for order {order_data['order_number']}")
+                    success_messages.append(f"License for category '{category}' sent to {order_data['email']}")
+                except Exception as e:
+                    # Out of stock: send notification email
+                    logger.error(f"Error assigning license: {str(e)}")
+                    await email_service.send_out_of_stock_email(
+                        customer_email=order_data["email"],
+                        product_name=item["title"],
+                        category=category
+                    )
+                    success_messages.append(f"No license available for category '{category}' (notified {order_data['email']})")
             except Exception as e:
                 logger.error(f"Error processing line item: {str(e)}")
                 return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
-        
-        return JSONResponse(content={"status": "success"}, status_code=200)
-    
+        return JSONResponse(content={"status": "success", "messages": success_messages}, status_code=200)
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
         return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
+
+@app.post("/licenses/add/{category}")
+async def add_licenses(category: str, licenses: str = None):
+    """Add license keys to a category. Accepts a plain text list (one per line) or JSON array."""
+    from fastapi import Request
+    from fastapi import Form
+    from fastapi import Body
+    import json
+    try:
+        # Accept both JSON array and plain text
+        if licenses is None:
+            return {"status": "error", "detail": "No licenses provided"}
+        try:
+            # Try to parse as JSON array
+            keys = json.loads(licenses)
+            if not isinstance(keys, list):
+                raise ValueError
+        except Exception:
+            # Fallback: treat as plain text, one key per line
+            keys = [k.strip() for k in licenses.splitlines() if k.strip()]
+        await license_service.add_licenses(category, keys)
+        return {"status": "success", "added": len(keys)}
+    except Exception as e:
+        logger.error(f"Error adding licenses: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 async def health_check():

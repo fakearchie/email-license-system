@@ -257,3 +257,33 @@ async def send_email_with_retry(message, max_retries=3):
     
     # If we got here, all retries failed
     raise last_error
+
+async def send_out_of_stock_email(
+    customer_email: str,
+    product_name: str,
+    category: str
+) -> None:
+    """Send an out-of-stock notification email to the customer."""
+    subject = f"We're out of license keys for {product_name} ({category})"
+    body = f"""
+Hello,
+
+Thank you for your order of {product_name}.
+
+Unfortunately, we are currently out of license keys for the category '{category}'. We will send your license key as soon as more become available. If you have any questions, please contact support.
+
+Best regards,
+The Team
+"""
+    try:
+        message = MIMEMultipart("alternative")
+        message["Subject"] = subject
+        message["From"] = settings.SMTP_FROM_EMAIL
+        message["To"] = customer_email
+        message.attach(MIMEText(body, "plain"))
+        await send_email_with_retry(message)
+        logger.info(f"Out-of-stock email sent to {customer_email} for {product_name} ({category})")
+    except Exception as e:
+        logger.error(f"Failed to send out-of-stock email: {str(e)}")
+        # Fallback: log instead
+        logger.info(f"OUT OF STOCK EMAIL LOG: To: {customer_email}, Product: {product_name}, Category: {category}")

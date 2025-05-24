@@ -135,3 +135,52 @@ def remove_key(key: str) -> bool:
             save_licenses(category, keys)
             return True
     return False
+
+async def pop_license_key(category: str) -> str:
+    """Pop and return the next license key from licenses.json for the given category."""
+    try:
+        if not os.path.exists(LICENSES_FILE):
+            logger.error(f"licenses.json file not found at {LICENSES_FILE}")
+            raise Exception("License key file missing. Please contact support.")
+        with open(LICENSES_FILE, 'r+', encoding='utf-8') as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse licenses.json: {e}")
+                raise Exception("License key file is corrupted. Please contact support.")
+            keys = data.get(category, [])
+            if not keys:
+                logger.error(f"No license keys left for category: {category}")
+                raise Exception(f"No license keys left for category: {category}")
+            license_key = keys.pop(0)
+            data[category] = keys
+            f.seek(0)
+            f.truncate()
+            json.dump(data, f, indent=2)
+        logger.info(f"Popped license key {license_key} from category {category}")
+        return license_key
+    except Exception as e:
+        logger.error(f"Error retrieving license key: {e}")
+        raise
+
+async def add_licenses(category: str, new_keys: list[str]):
+    """Add new license keys to a category in licenses.json."""
+    try:
+        if not os.path.exists(LICENSES_FILE):
+            data = {}
+        else:
+            with open(LICENSES_FILE, 'r', encoding='utf-8') as f:
+                try:
+                    data = json.load(f)
+                except json.JSONDecodeError:
+                    data = {}
+        keys = data.get(category, [])
+        # Add only unique keys
+        keys.extend([key for key in new_keys if key not in keys])
+        data[category] = keys
+        with open(LICENSES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Added {len(new_keys)} license keys to category {category}")
+    except Exception as e:
+        logger.error(f"Error adding licenses: {e}")
+        raise
