@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Product category mapping
     PRODUCT_CATEGORY_MAP: dict = {}
     
+    # Admin API key
+    ADMIN_API_KEY: str = "changeme"
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Parse PRODUCT_CATEGORY_MAP if it's a string
