@@ -1,10 +1,12 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.responses import JSONResponse
 import logging
 import os
 from app.config import Settings
 from app.services import email_service, license_service
 from app.utils.shopify import verify_webhook
+
+API_KEY = os.environ.get("ADMIN_API_KEY", "changeme")
 
 app = FastAPI(title="License Key Delivery System")
 settings = Settings()
@@ -48,8 +50,10 @@ async def handle_order_paid(request: Request):
         return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
 
 @app.post("/licenses/add/{category}")
-async def add_licenses(category: str, licenses: str = None):
+async def add_licenses(category: str, licenses: str = None, x_api_key: str = Header(None)):
     import json
+    if x_api_key != API_KEY:
+        return JSONResponse(content={"status": "error", "detail": "Unauthorized"}, status_code=401)
     try:
         if licenses is None:
             return {"status": "error", "detail": "No licenses provided"}
