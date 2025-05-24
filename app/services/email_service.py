@@ -1,9 +1,9 @@
-import os
 from typing import Optional
 import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from jinja2 import Template
+import os
 import ssl
 import logging
 import time
