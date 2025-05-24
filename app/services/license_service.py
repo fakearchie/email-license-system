@@ -1,11 +1,15 @@
 from typing import Optional, List, Dict
 import logging
 import uuid
+import os
+import json
 from app.config import Settings
 from app.services import supabase_service
 
 settings = Settings()
 logger = logging.getLogger(__name__)
+
+LICENSES_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), '../licenses.json')
 
 async def get_product_category(product_id: str) -> str:
     """Determine license category based on product ID"""
@@ -26,17 +30,18 @@ async def get_product_category(product_id: str) -> str:
     return category
 
 async def generate_license_key(category: str, order_id: str, product_id: str) -> str:
-    """Generate a new license key for a given category and order"""
-    # Get category prefix
-    category_info = settings.LICENSE_CATEGORIES.get(category.lower(), {"prefix": category.upper()})
-    prefix = category_info.get("prefix", category.upper())
-    
-    # Generate a unique identifier
-    unique_id = str(uuid.uuid4())[:8]
-    
-    # Format: PREFIX-ORDER-PRODUCTID-UUID
-    license_key = f"{prefix}-{order_id}-{product_id[-4:]}-{unique_id}"
-    
+    """Pop and return the next license key from licenses.json for the given category."""
+    with open(LICENSES_FILE, 'r+') as f:
+        data = json.load(f)
+        keys = data.get(category, [])
+        if not keys:
+            raise Exception(f"No license keys left for category: {category}")
+        license_key = keys.pop(0)
+        data[category] = keys
+        f.seek(0)
+        f.truncate()
+        json.dump(data, f, indent=2)
+    logger.info(f"Popped license key {license_key} from category {category}")
     return license_key
 
 async def store_license_key(
