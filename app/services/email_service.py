@@ -48,32 +48,27 @@ EMAIL_TEMPLATE = """
 
 OUT_OF_STOCK_TEMPLATE = """
 <!DOCTYPE html>
-<html lang=\"en\">\n<head>
-    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <style>
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f6fb; color: #222; margin: 0; padding: 0; }
-        .container { max-width: 520px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px #0002; padding: 40px 32px; }
-        h1 { font-size: 28px; font-weight: 800; color: #d7263d; margin-bottom: 18px; letter-spacing: -1px; }
-        .icon { font-size: 48px; margin-bottom: 16px; color: #d7263d; }
-        .message { font-size: 17px; margin-bottom: 28px; line-height: 1.7; }
-        .category { font-size: 16px; color: #444; font-weight: 600; background: #f8d7da; border-radius: 6px; padding: 2px 10px; margin: 0 2px; }
-        .footer { margin-top: 36px; font-size: 13px; color: #888; border-top: 1px solid #eee; padding-top: 18px; }
-        .support { color: #d7263d; text-decoration: none; font-weight: 600; }
-        .brand { font-weight: 700; color: #222; }
+<html lang=\"en\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7f7f7; color: #222; margin: 0; padding: 0; }
+        .container { max-width: 480px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #0001; padding: 32px 24px; }
+        h1 { font-size: 22px; font-weight: 700; color: #222; margin-bottom: 18px; }
+        .message { font-size: 15px; margin-bottom: 20px; line-height: 1.6; }
+        .footer { margin-top: 28px; font-size: 12px; color: #888; border-top: 1px solid #eee; padding-top: 12px; }
     </style>
 </head>
 <body>
     <div class=\"container\">
-        <div class=\"icon\">🚫</div>
-        <h1>We're Out of License Keys</h1>
+        <h1>License Key Out of Stock</h1>
         <div class=\"message\">
             Hello,<br><br>
-            Thank you for your order of <span class=\"brand\">{{ product_name }}</span>.<br><br>
-            <span style=\"color:#d7263d;font-weight:600;\">Unfortunately, we are currently out of license keys for the <span class=\"category\">{{ category }}</span> category.</span><br><br>
-            We will send your license key as soon as more become available.<br><br>
-            If you have any questions, please <a href=\"mailto:support@example.com\" class=\"support\">contact support</a>.<br><br>
-            We apologize for the inconvenience and appreciate your patience.
+            We are currently out of license keys for your order <b>#{{ order_number }}</b> (category: <b>{{ category }}</b>).<br><br>
+            We will send your license key as soon as more become available.
         </div>
-        <div class=\"footer\">&copy; {{ current_year }} Spotlight. All rights reserved.</div>
+        <div class=\"footer\">&copy; {{ current_year }} Spotlight</div>
     </div>
 </body>
 </html>

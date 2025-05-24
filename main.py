@@ -22,7 +22,7 @@ async def handle_order_paid(request: Request):
         if not await verify_webhook(request, settings.SHOPIFY_WEBHOOK_SECRET):
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
         order_data = await request.json()
-        summary = []
+        summary = set()
         for item in order_data.get("line_items", []):
             try:
                 product_id = str(item["product_id"])
@@ -35,17 +35,26 @@ async def handle_order_paid(request: Request):
                         product_name=item["title"],
                         license_key=license_key
                     )
-                    summary.append(f"License for category '{category}' sent to {order_data['email']}")
-                except Exception as e:
-                    await email_service.send_out_of_stock_email(
-                        customer_email=order_data["email"],
-                        product_name=item["title"],
-                        category=category
-                    )
-                    summary.append(f"No license available for category '{category}' (notified {order_data['email']})")
+                    summary.add(f"License for category '{category}' sent to {order_data['email']}")
+                except Exception:
+                    # Only add one out-of-stock message per category/email/order
+                    key = f"outofstock:{category}:{order_data['email']}:{order_data['order_number']}"
+                    if key not in summary:
+                        await email_service.send_out_of_stock_email(
+                            customer_email=order_data["email"],
+                            product_name=item["title"],
+                            category=category,
+                            order_number=order_data["order_number"]
+                        )
+                        summary.add(key)
             except Exception as e:
                 return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
-        return JSONResponse(content={"status": "success", "message": "\n".join(summary)}, status_code=200)
+        # Only show unique messages, and for out-of-stock, show a single line per category/email/order
+        out_msgs = [
+            f"No license available for category '{key.split(':')[1]}' (notified {key.split(':')[2]})"
+            if key.startswith("outofstock:") else key for key in summary
+        ]
+        return JSONResponse(content={"status": "success", "message": "\n".join(out_msgs)}, status_code=200)
     except Exception as e:
         return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
 
