@@ -22,6 +22,11 @@ async def startup_event():
 @app.post("/webhook/order/paid")
 async def handle_order_paid(request: Request):
     try:
+        # Debug: log all headers and raw body for troubleshooting signature issues
+        headers = dict(request.headers)
+        logger.error(f"Webhook headers: {headers}")
+        raw_body = await request.body()
+        logger.error(f"Webhook raw body: {raw_body}")
         if not await verify_webhook(request, settings.SHOPIFY_WEBHOOK_SECRET):
             logger.error("Invalid webhook signature")
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
