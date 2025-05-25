@@ -78,10 +78,22 @@ async def handle_order_paid(request: Request):
                 key = f"outofstock:{category}:taio201021@gmail.com:{order_number}"
                 summary.add(key)
                 out_of_stock_flag = True
-        out_msgs = [
-            f"No license available for category '{key.split(':')[1]}' (notified {key.split(':')[2]})"
-            if key.startswith("outofstock:") else key for key in summary
-        ]
+        out_msgs = []
+        # Count success and out-of-stock messages by category
+        from collections import Counter
+        success_counter = Counter()
+        outofstock_counter = Counter()
+        for key in summary:
+            if key.startswith("outofstock:"):
+                cat = key.split(":")[1]
+                outofstock_counter[cat] += 1
+            elif key.startswith("License for category '"):
+                cat = key.split("'")[1]
+                success_counter[cat] += 1
+        for cat, count in success_counter.items():
+            out_msgs.append(f"License for category '{cat}' sent to taio201021@gmail.com ({count}x)")
+        for cat, count in outofstock_counter.items():
+            out_msgs.append(f"No license available for category '{cat}' (notified taio201021@gmail.com) ({count}x)")
         if not out_msgs:
             out_msgs = ["No license keys were available for this order. All items are out of stock."] if out_of_stock_flag else ["No action taken."]
         # Mark as delivered (add digital tag)
