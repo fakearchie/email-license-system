@@ -47,9 +47,6 @@ async def handle_order_paid(request: Request):
             try:
                 product_id = str(item["product_id"])
                 category = await license_service.get_product_category(product_id)
-                # Only process if the product is 'pro'
-                if category != "pro":
-                    continue
                 try:
                     license_key = await license_service.pop_license_key(category)
                     await email_service.send_license_email(
