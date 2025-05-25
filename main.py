@@ -22,6 +22,16 @@ async def handle_order_paid(request: Request):
         if not await verify_webhook(request, settings.SHOPIFY_WEBHOOK_SECRET):
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
         order_data = await request.json()
+        order_number = str(order_data["order_number"])
+        # Check if already delivered
+        import json
+        from pathlib import Path
+        licenses_path = Path(__file__).parent.parent / "licenses.json"
+        with open(licenses_path, "r+", encoding="utf-8") as f:
+            data = json.load(f)
+            delivered_orders = set(data.get("delivered_orders", []))
+            if order_number in delivered_orders:
+                return JSONResponse(content={"status": "success", "message": f"Order {order_number} already delivered (digital tag present)."}, status_code=200)
         summary = set()
         out_of_stock_flag = False
         for item in order_data.get("line_items", []):
@@ -32,13 +42,13 @@ async def handle_order_paid(request: Request):
                     license_key = await license_service.pop_license_key(category)
                     await email_service.send_license_email(
                         customer_email=order_data["email"],
-                        order_number=order_data["order_number"],
+                        order_number=order_number,
                         product_name=item["title"],
                         license_key=license_key
                     )
                     summary.add(f"License for category '{category}' sent to {order_data['email']}")
                 except Exception:
-                    key = f"outofstock:{category}:{order_data['email']}:{order_data['order_number']}"
+                    key = f"outofstock:{category}:{order_data['email']}:{order_number}"
                     summary.add(key)
                     out_of_stock_flag = True
             except Exception as e:
@@ -50,10 +60,17 @@ async def handle_order_paid(request: Request):
         ]
         if not out_msgs:
             out_msgs = ["No license keys were available for this order. All items are out of stock."] if out_of_stock_flag else ["No action taken."]
-        # Always return 200 OK so Shopify doesn't retry
+        # Mark as delivered (add digital tag)
+        with open(licenses_path, "r+", encoding="utf-8") as f:
+            data = json.load(f)
+            delivered_orders = set(data.get("delivered_orders", []))
+            delivered_orders.add(order_number)
+            data["delivered_orders"] = list(delivered_orders)
+            f.seek(0)
+            f.truncate()
+            json.dump(data, f, indent=2)
         return JSONResponse(content={"status": "success", "message": "\n".join(out_msgs)}, status_code=200)
     except Exception as e:
-        # Only return 500 for actual server errors, not for business logic
         return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
 
 @app.post("/licenses/add/{category}")

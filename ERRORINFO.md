@@ -1,1 +1,0 @@
-When out of stock --> It just ignores it, says "200 OK" and nothing happens
