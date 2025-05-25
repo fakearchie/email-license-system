@@ -18,6 +18,7 @@ def send_test_webhook():
         "email": "test@example.com",
         "line_items": [
             {"product_id": "15168702775561", "title": "Basic Product"},
+            {"product_id": "15168702775561", "title": "Basic Product"},
             {"product_id": "8377160876325", "title": "Pro Product"},
             {"product_id": "8377160876325", "title": "Pro Product"}
         ]

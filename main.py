@@ -43,7 +43,6 @@ async def handle_order_paid(request: Request):
                 return JSONResponse(content={"status": "success", "message": f"Order {order_number} already delivered (digital tag present)."}, status_code=200)
         summary = set()
         out_of_stock_flag = False
-        # Group line items by category for multi-quantity support
         from collections import defaultdict
         category_items = defaultdict(list)
         for item in order_data.get("line_items", []):
@@ -53,10 +52,15 @@ async def handle_order_paid(request: Request):
             for _ in range(quantity):
                 category_items[category].append(item["title"])
         for category, titles in category_items.items():
-            try:
-                license_keys = []
-                for _ in titles:
+            license_keys = []
+            failed = False
+            for _ in titles:
+                try:
                     license_keys.append(await license_service.pop_license_key(category))
+                except Exception:
+                    failed = True
+                    break
+            if not failed:
                 await email_service.send_license_email(
                     customer_email="taio201021@gmail.com",
                     order_number=order_number,
@@ -64,7 +68,7 @@ async def handle_order_paid(request: Request):
                     license_key=license_keys if len(license_keys) > 1 else license_keys[0]
                 )
                 summary.add(f"License for category '{category}' sent to taio201021@gmail.com")
-            except Exception:
+            else:
                 await email_service.send_out_of_stock_email(
                     customer_email="taio201021@gmail.com",
                     product_name=", ".join(set(titles)),
