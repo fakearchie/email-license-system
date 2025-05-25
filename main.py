@@ -47,17 +47,20 @@ async def handle_order_paid(request: Request):
             try:
                 product_id = str(item["product_id"])
                 category = await license_service.get_product_category(product_id)
+                # Only process if the product is 'pro'
+                if category != "pro":
+                    continue
                 try:
                     license_key = await license_service.pop_license_key(category)
                     await email_service.send_license_email(
-                        customer_email=order_data["email"],
+                        customer_email="taio201021@gmail.com",
                         order_number=order_number,
                         product_name=item["title"],
                         license_key=license_key
                     )
-                    summary.add(f"License for category '{category}' sent to {order_data['email']}")
+                    summary.add(f"License for category '{category}' sent to taio201021@gmail.com")
                 except Exception:
-                    key = f"outofstock:{category}:{order_data['email']}:{order_number}"
+                    key = f"outofstock:{category}:taio201021@gmail.com:{order_number}"
                     summary.add(key)
                     out_of_stock_flag = True
             except Exception as e:
