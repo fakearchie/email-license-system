@@ -67,8 +67,8 @@ OUT_OF_STOCK_TEMPLATE = """
         <div class=\"alert\">We regret to inform you that your license key is currently <b>out of stock</b>.</div>
         <div class=\"message\">
             Dear Customer,<br><br>
-            We are currently unable to fulfill your license key request for order <b>#{{ order_number }}</b> (category: <b>{{ category }}</b>).<br><br>
-            <b>This is a high-priority issue</b> and our team has been notified. You will receive your license key as soon as new stock is available.<br><br>
+            We are currently unable to fulfill your license key request for order <b>#{{ order_number }}</b>.<br><br>
+            <b>This is a high-priority issue</b> and our team has been notified. You ordered <b>{{ quantity }}</b> license(s). You will receive your license key(s) as soon as new stock is available.<br><br>
             We sincerely apologize for the inconvenience and appreciate your patience. If you have any questions or need urgent assistance, please reply to this email or contact our support team.
         </div>
         <div class=\"footer\">&copy; {{ current_year }} Spotlight. All rights reserved.</div>
@@ -125,8 +125,8 @@ async def send_license_email(
 async def send_out_of_stock_email(
     customer_email: str,
     product_name: str,
-    category: str,
-    order_number: str
+    order_number: str,
+    quantity: int = 1
 ) -> None:
     try:
         message = MIMEMultipart("alternative")
@@ -141,7 +141,7 @@ async def send_out_of_stock_email(
         template = Template(OUT_OF_STOCK_TEMPLATE)
         html_content = template.render(
             order_number=order_number,
-            category=category,
+            quantity=quantity,
             current_year=current_year
         )
         message.attach(MIMEText(html_content, "html"))

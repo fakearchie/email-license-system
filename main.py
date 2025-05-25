@@ -43,7 +43,7 @@ async def handle_order_paid(request: Request):
                 return JSONResponse(content={"status": "success", "message": f"Order {order_number} already delivered (digital tag present)."}, status_code=200)
         summary = set()
         out_of_stock_flag = False
-        from collections import defaultdict
+        from collections import defaultdict, Counter
         category_items = defaultdict(list)
         for item in order_data.get("line_items", []):
             product_id = str(item["product_id"])
@@ -67,33 +67,24 @@ async def handle_order_paid(request: Request):
                     product_name=", ".join(set(titles)),
                     license_key=license_keys if len(license_keys) > 1 else license_keys[0]
                 )
-                summary.add(f"License for category '{category}' sent to taio201021@gmail.com")
+                summary.add((category, len(license_keys)))
             else:
                 await email_service.send_out_of_stock_email(
                     customer_email="taio201021@gmail.com",
                     product_name=", ".join(set(titles)),
                     category=category,
-                    order_number=order_number
+                    order_number=order_number,
+                    quantity=len(titles)
                 )
-                key = f"outofstock:{category}:taio201021@gmail.com:{order_number}"
-                summary.add(key)
+                summary.add((f"outofstock:{category}", len(titles)))
                 out_of_stock_flag = True
         out_msgs = []
-        # Count success and out-of-stock messages by category
-        from collections import Counter
-        success_counter = Counter()
-        outofstock_counter = Counter()
-        for key in summary:
-            if key.startswith("outofstock:"):
+        for key, count in summary:
+            if isinstance(key, str) and key.startswith("outofstock:"):
                 cat = key.split(":")[1]
-                outofstock_counter[cat] += 1
-            elif key.startswith("License for category '"):
-                cat = key.split("'")[1]
-                success_counter[cat] += 1
-        for cat, count in success_counter.items():
-            out_msgs.append(f"License for category '{cat}' sent to taio201021@gmail.com ({count}x)")
-        for cat, count in outofstock_counter.items():
-            out_msgs.append(f"No license available for category '{cat}' (notified taio201021@gmail.com) ({count}x)")
+                out_msgs.append(f"No license available for category '{cat}' (notified taio201021@gmail.com) ({count}x)")
+            else:
+                out_msgs.append(f"License sent to taio201021@gmail.com ({count}x)")
         if not out_msgs:
             out_msgs = ["No license keys were available for this order. All items are out of stock."] if out_of_stock_flag else ["No action taken."]
         # Mark as delivered (add digital tag)
