@@ -39,15 +39,8 @@ async def handle_order_paid(request: Request):
                     summary.add(f"License for category '{category}' sent to {order_data['email']}")
                 except Exception:
                     key = f"outofstock:{category}:{order_data['email']}:{order_data['order_number']}"
-                    if key not in summary:
-                        await email_service.send_out_of_stock_email(
-                            customer_email=order_data["email"],
-                            product_name=item["title"],
-                            category=category,
-                            order_number=order_data["order_number"]
-                        )
-                        summary.add(key)
-                        out_of_stock_flag = True
+                    summary.add(key)
+                    out_of_stock_flag = True
             except Exception as e:
                 summary.add(f"Error processing line item: {str(e)}")
                 continue
