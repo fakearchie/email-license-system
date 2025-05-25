@@ -26,6 +26,7 @@ async def handle_order_paid(request: Request):
         # Check if already delivered
         import json
         from pathlib import Path
+        # Use correct path for licenses.json (relative to project root)
         licenses_path = Path(__file__).parent.parent / "licenses.json"
         with open(licenses_path, "r+", encoding="utf-8") as f:
             data = json.load(f)
