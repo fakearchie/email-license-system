@@ -29,8 +29,13 @@ async def handle_order_paid(request: Request):
         # Use correct path for licenses.json (relative to project root, always absolute)
         licenses_path = Path(__file__).parent / "../licenses.json"
         licenses_path = licenses_path.resolve()
+        # Fallback: try project root if not found
         if not licenses_path.exists():
-            raise Exception(f"licenses.json not found at {licenses_path}")
+            alt_path = Path.cwd() / "licenses.json"
+            if alt_path.exists():
+                licenses_path = alt_path
+            else:
+                raise Exception(f"licenses.json not found at {licenses_path} or {alt_path}")
         with open(licenses_path, "r+", encoding="utf-8") as f:
             data = json.load(f)
             delivered_orders = set(data.get("delivered_orders", []))
