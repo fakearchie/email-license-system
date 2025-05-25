@@ -72,7 +72,6 @@ async def handle_order_paid(request: Request):
                 await email_service.send_out_of_stock_email(
                     customer_email="taio201021@gmail.com",
                     product_name=", ".join(set(titles)),
-                    category=category,
                     order_number=order_number,
                     quantity=len(titles)
                 )
