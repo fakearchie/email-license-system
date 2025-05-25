@@ -6,7 +6,7 @@ import os
 import random
 
 SHOPIFY_WEBHOOK_SECRET = os.environ.get("SHOPIFY_WEBHOOK_SECRET", "1a3856d3d7c3086ed6b49fc32e326b51b03f71972e72136b7ea414bd1d4ff324")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://email-license-system-production.up.railway.app/webhook/order/paid")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://usign.site/webhook/order/paid")
 
 def generate_hmac(data: bytes, secret: str) -> str:
     digest = hmac.new(secret.encode("utf-8"), data, "sha256").digest()
@@ -18,6 +18,7 @@ def send_test_webhook():
         "email": "test@example.com",
         "line_items": [
             {"product_id": "15168702775561", "title": "Basic Product"},
+            {"product_id": "8377160876325", "title": "Pro Product"},
             {"product_id": "8377160876325", "title": "Pro Product"}
         ]
     }

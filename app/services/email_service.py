@@ -53,22 +53,25 @@ OUT_OF_STOCK_TEMPLATE = """
     <meta charset=\"UTF-8\">
     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
     <style>
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7f7f7; color: #222; margin: 0; padding: 0; }
-        .container { max-width: 480px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #0001; padding: 32px 24px; }
-        h1 { font-size: 22px; font-weight: 700; color: #222; margin-bottom: 18px; }
-        .message { font-size: 15px; margin-bottom: 20px; line-height: 1.6; }
-        .footer { margin-top: 28px; font-size: 12px; color: #888; border-top: 1px solid #eee; padding-top: 12px; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #222; margin: 0; padding: 0; }
+        .container { max-width: 520px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px #0002; padding: 40px 32px; border: 1px solid #e0e0e0; }
+        h1 { font-size: 26px; font-weight: 700; color: #b00020; margin-bottom: 18px; letter-spacing: -0.5px; }
+        .message { font-size: 16px; margin-bottom: 24px; line-height: 1.7; color: #333; }
+        .footer { margin-top: 32px; font-size: 13px; color: #888; border-top: 1px solid #eee; padding-top: 14px; }
+        .alert { background: #fff3f3; border: 1px solid #ffcccc; color: #b00020; padding: 16px; border-radius: 8px; margin-bottom: 24px; font-size: 15px; }
     </style>
 </head>
 <body>
     <div class=\"container\">
-        <h1>License Key Out of Stock</h1>
+        <h1>Important: License Key Unavailable</h1>
+        <div class=\"alert\">We regret to inform you that your license key is currently <b>out of stock</b>.</div>
         <div class=\"message\">
-            Hello,<br><br>
-            We are currently out of license keys for your order <b>#{{ order_number }}</b> (category: <b>{{ category }}</b>).<br><br>
-            We will send your license key as soon as more become available.
+            Dear Customer,<br><br>
+            We are currently unable to fulfill your license key request for order <b>#{{ order_number }}</b> (category: <b>{{ category }}</b>).<br><br>
+            <b>This is a high-priority issue</b> and our team has been notified. You will receive your license key as soon as new stock is available.<br><br>
+            We sincerely apologize for the inconvenience and appreciate your patience. If you have any questions or need urgent assistance, please reply to this email or contact our support team.
         </div>
-        <div class=\"footer\">&copy; {{ current_year }} Spotlight</div>
+        <div class=\"footer\">&copy; {{ current_year }} Spotlight. All rights reserved.</div>
     </div>
 </body>
 </html>
@@ -80,7 +83,7 @@ async def send_license_email(
     customer_email: str,
     order_number: str,
     product_name: str,
-    license_key: str
+    license_key: str | list[str]
 ) -> None:
     try:
         message = MIMEMultipart("alternative")
@@ -93,13 +96,26 @@ async def send_license_email(
         except Exception:
             current_year = default_current_year
         template = Template(EMAIL_TEMPLATE)
-        html_content = template.render(
-            order_number=order_number,
-            product_name=product_name,
-            license_key=license_key,
-            shop_domain=settings.SHOPIFY_SHOP_DOMAIN.strip('/'),
-            current_year=current_year
-        )
+        # Support sending multiple keys in one email
+        if isinstance(license_key, list):
+            license_key_html = "".join([
+                f'<div class="license-key">{key}</div>' for key in license_key
+            ])
+            html_content = template.render(
+                order_number=order_number,
+                product_name=product_name,
+                license_key=license_key_html,
+                shop_domain=settings.SHOPIFY_SHOP_DOMAIN.strip('/'),
+                current_year=current_year
+            )
+        else:
+            html_content = template.render(
+                order_number=order_number,
+                product_name=product_name,
+                license_key=license_key,
+                shop_domain=settings.SHOPIFY_SHOP_DOMAIN.strip('/'),
+                current_year=current_year
+            )
         message.attach(MIMEText(html_content, "html"))
         await send_email_with_retry(message)
     except Exception as e:

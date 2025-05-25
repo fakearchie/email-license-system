@@ -43,33 +43,37 @@ async def handle_order_paid(request: Request):
                 return JSONResponse(content={"status": "success", "message": f"Order {order_number} already delivered (digital tag present)."}, status_code=200)
         summary = set()
         out_of_stock_flag = False
+        # Group line items by category for multi-quantity support
+        from collections import defaultdict
+        category_items = defaultdict(list)
         for item in order_data.get("line_items", []):
+            product_id = str(item["product_id"])
+            category = await license_service.get_product_category(product_id)
+            quantity = item.get("quantity", 1)
+            for _ in range(quantity):
+                category_items[category].append(item["title"])
+        for category, titles in category_items.items():
             try:
-                product_id = str(item["product_id"])
-                category = await license_service.get_product_category(product_id)
-                try:
-                    license_key = await license_service.pop_license_key(category)
-                    await email_service.send_license_email(
-                        customer_email="taio201021@gmail.com",
-                        order_number=order_number,
-                        product_name=item["title"],
-                        license_key=license_key
-                    )
-                    summary.add(f"License for category '{category}' sent to taio201021@gmail.com")
-                except Exception:
-                    # Send out-of-stock notification email using the correct function
-                    await email_service.send_out_of_stock_email(
-                        customer_email="taio201021@gmail.com",
-                        product_name=item["title"],
-                        category=category,
-                        order_number=order_number
-                    )
-                    key = f"outofstock:{category}:taio201021@gmail.com:{order_number}"
-                    summary.add(key)
-                    out_of_stock_flag = True
-            except Exception as e:
-                summary.add(f"Error processing line item: {str(e)}")
-                continue
+                license_keys = []
+                for _ in titles:
+                    license_keys.append(await license_service.pop_license_key(category))
+                await email_service.send_license_email(
+                    customer_email="taio201021@gmail.com",
+                    order_number=order_number,
+                    product_name=", ".join(set(titles)),
+                    license_key=license_keys if len(license_keys) > 1 else license_keys[0]
+                )
+                summary.add(f"License for category '{category}' sent to taio201021@gmail.com")
+            except Exception:
+                await email_service.send_out_of_stock_email(
+                    customer_email="taio201021@gmail.com",
+                    product_name=", ".join(set(titles)),
+                    category=category,
+                    order_number=order_number
+                )
+                key = f"outofstock:{category}:taio201021@gmail.com:{order_number}"
+                summary.add(key)
+                out_of_stock_flag = True
         out_msgs = [
             f"No license available for category '{key.split(':')[1]}' (notified {key.split(':')[2]})"
             if key.startswith("outofstock:") else key for key in summary
