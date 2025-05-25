@@ -109,18 +109,22 @@ async def send_license_email(
 async def send_out_of_stock_email(
     customer_email: str,
     product_name: str,
-    category: str
+    category: str,
+    order_number: str
 ) -> None:
     try:
         message = MIMEMultipart("alternative")
-        message["Subject"] = f"We're out of license keys for {product_name} ({category})"
+        message["Subject"] = f"License Key Out of Stock for Order #{order_number}"
         message["From"] = settings.SMTP_FROM_EMAIL
         message["To"] = customer_email
         from datetime import datetime
-        current_year = datetime.now().year
+        try:
+            current_year = datetime.now().year
+        except Exception:
+            current_year = default_current_year
         template = Template(OUT_OF_STOCK_TEMPLATE)
         html_content = template.render(
-            product_name=product_name,
+            order_number=order_number,
             category=category,
             current_year=current_year
         )
