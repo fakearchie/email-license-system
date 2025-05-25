@@ -23,6 +23,7 @@ async def handle_order_paid(request: Request):
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
         order_data = await request.json()
         summary = set()
+        out_of_stock_flag = False
         for item in order_data.get("line_items", []):
             try:
                 product_id = str(item["product_id"])
@@ -37,7 +38,6 @@ async def handle_order_paid(request: Request):
                     )
                     summary.add(f"License for category '{category}' sent to {order_data['email']}")
                 except Exception:
-                    # Only add one out-of-stock message per category/email/order
                     key = f"outofstock:{category}:{order_data['email']}:{order_data['order_number']}"
                     if key not in summary:
                         await email_service.send_out_of_stock_email(
@@ -47,15 +47,16 @@ async def handle_order_paid(request: Request):
                             order_number=order_data["order_number"]
                         )
                         summary.add(key)
+                        out_of_stock_flag = True
             except Exception as e:
-                # Instead of 500, just add a generic error message and continue
                 summary.add(f"Error processing line item: {str(e)}")
                 continue
-        # Only show unique messages, and for out-of-stock, show a single line per category/email/order
         out_msgs = [
             f"No license available for category '{key.split(':')[1]}' (notified {key.split(':')[2]})"
             if key.startswith("outofstock:") else key for key in summary
         ]
+        if not out_msgs:
+            out_msgs = ["No license keys were available for this order. All items are out of stock."] if out_of_stock_flag else ["No action taken."]
         # Always return 200 OK so Shopify doesn't retry
         return JSONResponse(content={"status": "success", "message": "\n".join(out_msgs)}, status_code=200)
     except Exception as e:
