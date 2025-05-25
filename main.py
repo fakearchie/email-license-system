@@ -27,7 +27,7 @@ async def handle_order_paid(request: Request):
         # Check if already delivered
         import json
         # Use correct path for licenses.json (relative to project root, always absolute)
-        licenses_path = Path(__file__).parent.parent / "licenses.json"
+        licenses_path = Path(__file__).parent / "../licenses.json"
         licenses_path = licenses_path.resolve()
         if not licenses_path.exists():
             raise Exception(f"licenses.json not found at {licenses_path}")
