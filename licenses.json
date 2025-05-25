@@ -1,12 +1,6 @@
 {
-  "basic": [
-  ],
-  "pro": [
-    "PRO-KEY-1-TEST",
-    "PRO-KEY-2-TEST"
-  ],
-  "enterprise": [
-    "ENT-KEY-1-TEST"
-  ],
+  "basic": [],
+  "pro": [],
+  "enterprise": [],
   "delivered_orders": []
 }
