@@ -5,6 +5,7 @@ import os
 from app.config import Settings
 from app.services import email_service, license_service
 from app.utils.shopify import verify_webhook
+from pathlib import Path
 
 API_KEY = os.environ.get("ADMIN_API_KEY", "changeme")
 
@@ -25,9 +26,11 @@ async def handle_order_paid(request: Request):
         order_number = str(order_data["order_number"])
         # Check if already delivered
         import json
-        from pathlib import Path
-        # Use correct path for licenses.json (relative to project root)
+        # Use correct path for licenses.json (relative to project root, always absolute)
         licenses_path = Path(__file__).parent.parent / "licenses.json"
+        licenses_path = licenses_path.resolve()
+        if not licenses_path.exists():
+            raise Exception(f"licenses.json not found at {licenses_path}")
         with open(licenses_path, "r+", encoding="utf-8") as f:
             data = json.load(f)
             delivered_orders = set(data.get("delivered_orders", []))
