@@ -57,6 +57,14 @@ async def handle_order_paid(request: Request):
                     )
                     summary.add(f"License for category '{category}' sent to taio201021@gmail.com")
                 except Exception:
+                    # Send out-of-stock notification email
+                    await email_service.send_license_email(
+                        customer_email="taio201021@gmail.com",
+                        order_number=order_number,
+                        product_name=item["title"],
+                        license_key=None,
+                        out_of_stock=True
+                    )
                     key = f"outofstock:{category}:taio201021@gmail.com:{order_number}"
                     summary.add(key)
                     out_of_stock_flag = True
