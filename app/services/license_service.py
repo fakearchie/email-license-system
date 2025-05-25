@@ -2,7 +2,6 @@ from typing import Optional, List, Dict
 import os
 import json
 from app.config import Settings
-from app.services import supabase_service
 
 settings = Settings()
 
@@ -45,28 +44,6 @@ async def generate_license_key(category: str, order_id: str, product_id: str) ->
         return license_key
     except Exception as e:
         raise
-
-async def store_license_key(
-    license_key: str, 
-    category: str, 
-    email: str, 
-    order_id: str, 
-    product_id: str,
-    product_name: str
-) -> Dict:
-    """Store a generated license key in Supabase"""
-    return await supabase_service.store_license_key(
-        license_key=license_key,
-        category=category,
-        email=email,
-        order_id=order_id,
-        product_id=product_id,
-        product_name=product_name
-    )
-
-async def verify_license_key(license_key: str) -> Dict:
-    """Verify if a license key is valid"""
-    return await supabase_service.verify_license_key(license_key)
         
     with open(get_license_file(category), 'w') as f:
         json.dump(keys, f, indent=2)
